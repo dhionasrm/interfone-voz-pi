@@ -1,0 +1,15 @@
+# Ignorar ambiente virtual
+venv/
+__pycache__/
+*.pyc
+
+# Ignorar arquivos do sistema
+.DS_Store
+
+# Ignorar banco de dados local (por segurança)
+*.db
+*.sqlite3
+
+# Ignorar o modelo de voz (muito grande para o git)
+# Colocaremos o link de download no README
+model-pt/
