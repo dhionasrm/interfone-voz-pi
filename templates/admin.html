@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gerenciar Ramais</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; background-color: #f9f9f9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .form-group { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; gap: 10px; }
+        input { padding: 10px; flex: 1; }
+        button { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; }
+        .btn-delete { background: #dc3545; color: white; text-decoration: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📞 Ramais Cadastrados</h1>
+        <a href="/logout" style="color: red;">Sair</a>
+    </header>
+
+    <div class="form-group">
+        <form method="POST" style="display: flex; width: 100%; gap: 10px;">
+            <input type="text" name="apartamento" placeholder="Número (Ex: 101)" required>
+            <input type="text" name="nome_fala" placeholder="Como se fala (Ex: cento e um)" required>
+            <button type="submit">Adicionar</button>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Apartamento</th>
+                <th>Frase de Voz</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ramal in ramais %}
+            <tr>
+                <td>{{ ramal[0] }}</td>
+                <td>{{ ramal[1] }}</td>
+                <td>{{ ramal[2] }}</td>
+                <td>
+                    <a href="/delete/{{ ramal[0] }}" class="btn-delete">Excluir</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

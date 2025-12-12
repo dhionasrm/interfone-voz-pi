@@ -4,53 +4,76 @@ import json
 import queue
 import time
 import sys
+import socket # Necessário para verificar a internet
+import sqlite3
 
 # --- Configurações ---
-MODEL_PATH = "model-pt"        
-TARGET_WORD_1 = "abrir"        
+MODEL_PATH = "model-pt"         
+TARGET_WORD_1 = "abrir"         
 TARGET_WORD_2 = "portão"        
 DEVICE = None                   
 SAMPLE_RATE = 16000             
 BLOCK_SIZE = 8000               
+CHECK_INTERVAL = 2  # Verifica a internet a cada X segundos (se estiver online)
 
-# --- Fila para comunicação entre o áudio e o processador ---
+# --- Fila para comunicação ---
 q = queue.Queue()
 
 def audio_callback(indata, frames, time, status):
-    """
-    Esta função é chamada pelo 'sounddevice' para cada bloco de áudio.
-    Ela roda em uma thread separada.
-    """
+    """Callback do microfone."""
     if status:
         print(status, file=sys.stderr)
-    # Adiciona os dados de áudio na fila
     q.put(bytes(indata))
 
+def check_internet():
+    """
+    Tenta conectar ao Google DNS (8.8.8.8) na porta 53.
+    Retorna True se tiver conexão, False se não tiver.
+    """
+    try:
+        # Timeout curto (1.5s) para não travar o sistema
+        socket.setdefaulttimeout(1.5)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("8.8.8.8", 53))
+        return True
+    except socket.error:
+        return False
+
+def toggle_master_relay(ativo):
+    """
+    Simula o relé que troca entre o Interfone IP e o Raspberry Pi.
+    ativo = True -> Raspberry assume (Internet caiu)
+    ativo = False -> Sistema IP assume (Internet ok)
+    """
+    if ativo:
+        print("\n🔴 [HARDWARE] RELÉ MESTRE ATIVADO: Desviando áudio para o Raspberry Pi.")
+    else:
+        print("\n🟢 [HARDWARE] RELÉ MESTRE DESLIGADO: Devolvendo áudio para o Interfone IP.")
+
 def open_door():
-    """
-    Função 'mock' (simulada).
-    No Raspberry Pi, esta função ativaria o relé.
-    """
+    """Simula a ação final (abrir porta ou chamar ramal)."""
     print("\n" + "="*30)
     print("  >>> COMANDO RECONHECIDO! <<<")
-    print("  >>> SIMULANDO: Ativando o relé...")
-    time.sleep(1) # Simula o tempo que o botão ficaria pressionado
-    print("  >>> SIMULANDO: Desativando o relé.")
+    print("  >>> AÇÃO: Ativando relé da fechadura...")
+    time.sleep(1) 
+    print("  >>> AÇÃO: Fechadura liberada.")
     print("="*30 + "\n")
 
 # --- Função Principal ---
 def main():
     try:
-        # 1. Verifica se o modelo existe
+        # 1. Carrega o modelo (Fazemos isso só uma vez no início)
         if not vosk.Model(MODEL_PATH):
-            print(f"Erro: Modelo de voz não encontrado em '{MODEL_PATH}'.")
-            print("Baixe o modelo em: https://alphacephei.com/vosk/models")
+            print(f"Erro: Modelo não encontrado em '{MODEL_PATH}'.")
             sys.exit(1)
         
-        # 2. Carrega o modelo
+        print("Carregando modelo de voz... (isso pode demorar um pouco)")
         model = vosk.Model(MODEL_PATH)
         
-        # 3. Abre o stream de áudio (microfone)
+        # 2. Configurações iniciais de estado
+        sistema_em_contingencia = False # Começamos assumindo que a internet está OK
+        last_check = 0
+        
+        # 3. Abre o microfone
         print("Iniciando stream de áudio...")
         with sd.RawInputStream(samplerate=SAMPLE_RATE, 
                                blocksize=BLOCK_SIZE, 
@@ -59,42 +82,67 @@ def main():
                                channels=1, 
                                callback=audio_callback):
 
-            # 4. Inicializa o reconhecedor Vosk
-            # As palavras-chave são passadas como 'hints' para melhorar a precisão
             recognizer = vosk.KaldiRecognizer(model, SAMPLE_RATE, 
                                               f'["{TARGET_WORD_1}", "{TARGET_WORD_2}", "[unk]"]')
             
-            print("\n🚀 Sistema pronto. Diga 'abrir portão'...\n")
+            print("\n📡 SISTEMA INICIADO. Monitorando conectividade...")
 
-            # 5. Loop principal de processamento
+            # 4. Loop Infinito
             while True:
-                # Pega dados de áudio da fila (bloqueia até ter dados)
-                data = q.get()
-                
-                # Alimenta o reconhecedor com os dados de áudio
-                if recognizer.AcceptWaveform(data):
-                    # Se o reconhecedor tiver um resultado final (frase completa)
-                    result_text = recognizer.Result()
+                current_time = time.time()
+
+                # --- LÓGICA DE VERIFICAÇÃO DE INTERNET ---
+                # Só verifica se passou o intervalo ou se já estamos no modo offline (verificação contínua)
+                if (current_time - last_check > CHECK_INTERVAL) or sistema_em_contingencia:
+                    tem_internet = check_internet()
+                    last_check = current_time
+
+                    # Cenário 1: Internet CAIU, mas o sistema ainda não assumiu
+                    if not tem_internet and not sistema_em_contingencia:
+                        print("\n⚠️ ALERTA: Queda de internet detectada!")
+                        sistema_em_contingencia = True
+                        toggle_master_relay(True) # Ativa o relé de desvio
+                        # Limpa a fila de áudio antiga para começar a ouvir agora
+                        with q.mutex: q.queue.clear() 
                     
-                    # O resultado é um JSON em formato string, precisamos converter
+                    # Cenário 2: Internet VOLTOU, e o sistema estava assumindo
+                    elif tem_internet and sistema_em_contingencia:
+                        print("\n✅ RESTABELECIDO: Internet voltou.")
+                        sistema_em_contingencia = False
+                        toggle_master_relay(False) # Devolve para o interfone original
+
+                # --- LÓGICA DE PROCESSAMENTO ---
+                
+                # Se tem internet (NÃO está em contingência), ignoramos o áudio
+                if not sistema_em_contingencia:
+                    # Esvazia a fila sem processar para não acumular memória
+                    try:
+                        while True: q.get_nowait()
+                    except queue.Empty:
+                        pass
+                    time.sleep(0.1) # Dorme um pouco para economizar CPU
+                    continue
+
+                # --- SE ESTIVER EM CONTINGÊNCIA (SEM INTERNET) ---
+                # Aqui o código roda igual ao anterior: processa a voz
+                try:
+                    data = q.get(timeout=1) # Espera áudio chegar
+                except queue.Empty:
+                    continue
+
+                if recognizer.AcceptWaveform(data):
+                    result_text = recognizer.Result()
                     result_json = json.loads(result_text)
                     text = result_json.get('text', '')
                     
                     if text:
-                        print(f"Ouvido: '{text}'")
+                        print(f"🎤 Ouvido (OFFLINE): '{text}'")
                         
-                        # 6. VERIFICAÇÃO DO COMANDO
                         if TARGET_WORD_1 in text and TARGET_WORD_2 in text:
-                            open_door() # Chama nossa função simulada!
-                    
-                # else:
-                    # Se quiser ver o processamento parcial (palavra por palavra)
-                    # partial_json = json.loads(recognizer.PartialResult())
-                    # print(f"Parcial: {partial_json.get('partial', '')}")
-                    pass
+                            open_door()
 
     except KeyboardInterrupt:
-        print("\n👋 Encerrando o programa.")
+        print("\n👋 Encerrando o sistema.")
         sys.exit(0)
     except Exception as e:
         print(f"Erro inesperado: {e}")
