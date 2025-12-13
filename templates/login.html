@@ -1,30 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-    <title>Login - Interfone Inteligente</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Dudis</title>
     <style>
-        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 300px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .error { color: red; font-size: 0.9em; text-align: center; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); /* Fundo degradê azul */
+            margin: 0;
+        }
+        
+        .card { 
+            background: white; 
+            padding: 2.5rem; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            width: 320px; 
+            text-align: center;
+        }
+
+        /* Estilo da Logo e Marca */
+        .logo-container {
+            margin-bottom: 20px;
+        }
+        
+        .brand-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0 20px 0;
+            letter-spacing: 1px;
+        }
+
+        .brand-subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* Campos do formulário */
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 8px 0; 
+            box-sizing: border-box; 
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #f9f9f9;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: #007bff;
+            outline: none;
+            background-color: #fff;
+        }
+
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 15px;
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        button:hover { 
+            background: #0056b3; 
+            transform: translateY(-1px);
+        }
+
+        .error { 
+            color: #dc3545; 
+            font-size: 0.9em; 
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 style="text-align: center;">Acesso Admin</h2>
         
+        <div class="logo-container">
+            <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#007bff"/>
+                <path d="M25 35C25 29.4772 29.4772 25 35 25H65C70.5228 25 75 29.4772 75 35V55C75 60.5228 70.5228 65 65 65H35L25 75V35Z" fill="white"/>
+                <path d="M40 45C40 45 42 42 45 42C48 42 50 45 50 45" stroke="#007bff" stroke-width="3" stroke-linecap="round"/>
+                <path d="M50 45C50 45 52 42 55 42C58 42 60 45 60 45" stroke="#007bff" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="50" cy="55" r="3" fill="#007bff"/>
+            </svg>
+        </div>
+
+        <div class="brand-name">Dudis</div>
+                
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-                <p class="error">{{ messages[0] }}</p>
+                <div class="error">{{ messages[0] }}</div>
             {% endif %}
         {% endwith %}
 
         <form method="POST">
-            <input type="text" name="username" placeholder="Usuário" required>
+            <input type="text" name="username" placeholder="Usuário" required autocomplete="off">
             <input type="password" name="password" placeholder="Senha" required>
-            <button type="submit">Entrar</button>
+            <button type="submit">Entrar no Sistema</button>
         </form>
     </div>
 </body>
